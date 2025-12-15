@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>サッカーランキング管理システム</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚽ サッカーランキング管理システム</h1>
+            <p>FIFAランキング形式で試合結果を記録</p>
+        </header>
+
+        <div class="main-content">
+            <!-- チーム登録セクション -->
+            <section class="section">
+                <h2>チーム登録</h2>
+                <div class="form-group">
+                    <input type="text" id="teamName" placeholder="チーム名を入力">
+                    <button onclick="addTeam()" class="btn btn-primary">チームを追加</button>
+                </div>
+            </section>
+
+            <!-- 試合記録セクション -->
+            <section class="section">
+                <h2>試合記録</h2>
+                <div class="match-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>ホームチーム</label>
+                            <select id="homeTeam">
+                                <option value="">選択してください</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>スコア</label>
+                            <div class="score-inputs">
+                                <input type="number" id="homeScore" min="0" value="0">
+                                <span>-</span>
+                                <input type="number" id="awayScore" min="0" value="0">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>アウェイチーム</label>
+                            <select id="awayTeam">
+                                <option value="">選択してください</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>試合タイプ</label>
+                            <select id="matchType">
+                                <option value="friendly">親善試合 (x1.0)</option>
+                                <option value="qualifier">予選 (x2.5)</option>
+                                <option value="continental">大陸選手権 (x3.0)</option>
+                                <option value="worldcup">ワールドカップ (x4.0)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>試合日</label>
+                            <input type="date" id="matchDate">
+                        </div>
+                    </div>
+                    <button onclick="recordMatch()" class="btn btn-success">試合を記録</button>
+                </div>
+            </section>
+
+            <!-- ランキング表示 -->
+            <section class="section">
+                <h2>現在のランキング</h2>
+                <div class="ranking-controls">
+                    <button onclick="exportData()" class="btn btn-secondary">データをエクスポート</button>
+                    <button onclick="clearAllData()" class="btn btn-danger">全データをクリア</button>
+                </div>
+                <div id="rankingTable"></div>
+            </section>
+
+            <!-- 試合履歴 -->
+            <section class="section">
+                <h2>試合履歴</h2>
+                <div id="matchHistory"></div>
+            </section>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
