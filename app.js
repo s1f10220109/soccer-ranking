@@ -126,7 +126,7 @@ function calculatePoints(teamPoints, opponentPoints, result, matchType) {
     // We: 期待結果（両チームのポイント差から計算）
     // We = 1 / (10^(-dr/600) + 1)
     const dr = opponentPoints - teamPoints;
-    const We = 1 / (Math.pow(10, -dr / 600) + 1);
+    const We = 1 / (Math.pow(10, dr / 600) + 1);
     
     // ポイント増減 = I × (W - We)
     const pointsChange = I * (W - We);
