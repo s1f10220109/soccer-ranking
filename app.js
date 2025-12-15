@@ -109,14 +109,14 @@ function updateTeamSelects() {
 
 // FIFAランキングポイントの計算
 function calculatePoints(teamPoints, opponentPoints, result, matchType) {
-    // 基本ポイント
+    // 基本ポイント（勝利=3、引き分け=1、敗北=-2）
     let points = 0;
     if (result === 'win') {
         points = 3;
     } else if (result === 'draw') {
         points = 1;
     } else {
-        points = 0;
+        points = -2; // 敗北時はマイナスポイント
     }
     
     // 対戦相手の強さによる補正（ポイント差に基づく）
