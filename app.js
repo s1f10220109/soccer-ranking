@@ -108,26 +108,31 @@ function updateTeamSelects() {
 }
 
 // FIFAランキングポイントの計算
+// ポイント増減 = I × (W - We)
 function calculatePoints(teamPoints, opponentPoints, result, matchType) {
-    // 基本ポイント（勝利=3、引き分け=1、敗北=-2）
-    let points = 0;
+    // I: 試合の重要度（試合タイプによる係数）
+    const I = MATCH_WEIGHTS[matchType];
+    
+    // W: 試合結果
+    let W = 0;
     if (result === 'win') {
-        points = 3;
+        W = 1;      // 勝利
     } else if (result === 'draw') {
-        points = 1;
+        W = 0.5;    // 引き分け
     } else {
-        points = -2; // 敗北時はマイナスポイント
+        W = 0;      // 敗北
     }
     
-    // 対戦相手の強さによる補正（ポイント差に基づく）
-    const pointsDiff = opponentPoints - teamPoints;
-    const strengthFactor = 1 + (pointsDiff / 600);
+    // We: 期待結果（両チームのポイント差から計算）
+    // We = 1 / (10^(-dr/600) + 1)
+    const dr = opponentPoints - teamPoints;
+    const We = 1 / (Math.pow(10, -dr / 600) + 1);
     
-    // 試合タイプの重み
-    const weight = MATCH_WEIGHTS[matchType];
+    // ポイント増減 = I × (W - We)
+    const pointsChange = I * (W - We);
     
-    // 最終ポイント計算
-    const finalPoints = points * strengthFactor * weight;
+    // ポイントを10倍して整数化（より大きな変動にする）
+    const finalPoints = pointsChange * 10;
     
     return Math.round(finalPoints * 10) / 10; // 小数点第1位まで
 }
