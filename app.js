@@ -53,6 +53,11 @@ function loadData() {
 function saveData() {
     localStorage.setItem(STORAGE_KEYS.TEAMS, JSON.stringify(teams));
     localStorage.setItem(STORAGE_KEYS.MATCHES, JSON.stringify(matches));
+    
+    // Firebaseにログイン済みの場合はクラウドにも保存
+    if (typeof saveDataToFirestore === 'function') {
+        saveDataToFirestore();
+    }
 }
 
 // チームを追加

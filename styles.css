@@ -301,6 +301,25 @@ table tbody tr:nth-child(odd):hover {
     font-size: 1.1em;
 }
 
+/* ユーザー情報表示 */
+.user-info-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.user-details h3 {
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.user-details p {
+    color: #666;
+    font-size: 0.9em;
+}
+
 /* レスポンシブデザイン */
 @media (max-width: 768px) {
     header h1 {
