@@ -130,7 +130,8 @@ async function saveDataToFirestore() {
         if (!doc.exists) {
             dataToSave.owner = currentUserId;
             dataToSave.ownerEmail = currentUserEmail;
-            dataToSave.sharedWith = []; // 共有ユーザーリスト
+            dataToSave.sharedWith = []; // 共有ユーザーのUIDリスト（セキュリティルール用）
+            dataToSave.sharedUsersInfo = []; // 共有ユーザーの詳細情報（表示用）
         }
         
         await docRef.set(dataToSave, { merge: true });
@@ -247,19 +248,25 @@ async function addUserToSharedList(rankingId) {
         if (doc.exists) {
             const data = doc.data();
             const sharedWith = data.sharedWith || [];
+            const sharedUsersInfo = data.sharedUsersInfo || [];
             
             // 既に追加されているかチェック
-            const alreadyShared = sharedWith.some(u => u.userId === currentUserId);
+            const alreadyShared = sharedWith.includes(currentUserId);
             
             if (!alreadyShared && data.owner !== currentUserId) {
-                sharedWith.push({
+                // UIDのリストに追加（セキュリティルール用）
+                sharedWith.push(currentUserId);
+                
+                // ユーザー情報を追加（表示用）
+                sharedUsersInfo.push({
                     userId: currentUserId,
                     email: currentUserEmail,
                     addedAt: new Date().toISOString()
                 });
                 
                 await docRef.update({
-                    sharedWith: sharedWith
+                    sharedWith: sharedWith,
+                    sharedUsersInfo: sharedUsersInfo
                 });
                 
                 console.log('共有ユーザーリストに追加されました');
@@ -275,7 +282,9 @@ function displaySharedUsers(data) {
     const sharedUsersList = document.getElementById('sharedUsersList');
     const sharedUsersContent = document.getElementById('sharedUsersContent');
     
-    if (!data || !data.sharedWith || data.sharedWith.length === 0) {
+    const sharedUsersInfo = data ? data.sharedUsersInfo || [] : [];
+    
+    if (!data || sharedUsersInfo.length === 0) {
         if (sharedUsersList) sharedUsersList.style.display = 'none';
         return;
     }
@@ -287,7 +296,7 @@ function displaySharedUsers(data) {
                 👑 ${data.ownerEmail} (オーナー)
              </li>`;
     
-    data.sharedWith.forEach(user => {
+    sharedUsersInfo.forEach(user => {
         html += `<li style="padding: 10px; background: #f9f9f9; border-radius: 5px; margin-bottom: 5px;">
                     👤 ${user.email}
                  </li>`;

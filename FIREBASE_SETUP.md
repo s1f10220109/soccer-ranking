@@ -56,17 +56,24 @@ Googleアカウントログイン機能を有効化するには、Firebaseプロ
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // 共有ユーザーかどうかチェックする関数
+    function isSharedUser(rankingId) {
+      let ranking = get(/databases/$(database)/documents/rankings/$(rankingId));
+      let sharedUsers = ranking.data.sharedWith;
+      return sharedUsers != null && request.auth.uid in sharedUsers;
+    }
+    
     match /rankings/{rankingId} {
-      // オーナーまたは共有ユーザーのみアクセス可能
+      // 読み取り・書き込み権限
       allow read, write: if request.auth != null && (
-        // オーナー本人
+        // 自分のランキング
         request.auth.uid == rankingId ||
-        // オーナーのドキュメント
+        // オーナーのランキング
         request.auth.uid == resource.data.owner ||
-        // 共有ユーザーリストに含まれている
-        request.auth.uid in resource.data.get('sharedWith', []).map(u => u.userId)
+        // 共有されているランキング
+        isSharedUser(rankingId)
       );
-      // 新規作成時（resourceがまだ存在しない）
+      // 新規作成（最初のログイン時）
       allow create: if request.auth != null && request.auth.uid == rankingId;
     }
   }
