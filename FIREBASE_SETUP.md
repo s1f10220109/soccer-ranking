@@ -41,7 +41,7 @@ Googleアカウントログイン機能を有効化するには、Firebaseプロ
 2. **「データベースの作成」をクリック**
 
 3. **セキュリティルールを選択**:
-   - 「本番環境モード」を選択（推奨）
+   - 「**テストモードで開始**」を選択（開発中は推奨）
    - 「次へ」をクリック
 
 4. **ロケーションを選択**:
@@ -50,13 +50,24 @@ Googleアカウントログイン機能を有効化するには、Firebaseプロ
 
 5. **セキュリティルールを設定**（「ルール」タブ）:
 
+データベース作成後、30日以内に以下のルールに変更してください：
+
 ```javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // ログインユーザーのみ自分のデータにアクセス可能
-    match /rankings/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    match /rankings/{rankingId} {
+      // オーナーまたは共有ユーザーのみアクセス可能
+      allow read, write: if request.auth != null && (
+        // オーナー本人
+        request.auth.uid == rankingId ||
+        // オーナーのドキュメント
+        request.auth.uid == resource.data.owner ||
+        // 共有ユーザーリストに含まれている
+        request.auth.uid in resource.data.get('sharedWith', []).map(u => u.userId)
+      );
+      // 新規作成時（resourceがまだ存在しない）
+      allow create: if request.auth != null && request.auth.uid == rankingId;
     }
   }
 }

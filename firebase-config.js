@@ -26,6 +26,7 @@ const googleProvider = new firebase.auth.GoogleAuthProvider();
 // 現在のユーザーID
 let currentUserId = null;
 let currentUserEmail = null;
+let currentRankingId = null; // 現在表示しているランキングID（共有対応）
 
 // 認証状態の監視
 auth.onAuthStateChanged((user) => {
@@ -77,22 +78,29 @@ async function logout() {
 function updateUIForLoggedIn(user) {
     const loginSection = document.getElementById('loginSection');
     const userInfo = document.getElementById('userInfo');
+    const shareSection = document.getElementById('shareSection');
     const userName = document.getElementById('userName');
     const userEmail = document.getElementById('userEmail');
     
     if (loginSection) loginSection.style.display = 'none';
     if (userInfo) userInfo.style.display = 'block';
+    if (shareSection) shareSection.style.display = 'block'; // 共有セクションを表示
     if (userName) userName.textContent = user.displayName || 'ユーザー';
     if (userEmail) userEmail.textContent = user.email;
+    
+    // URL に共有IDがあればロード
+    checkForSharedRanking();
 }
 
 // ログアウト時のUI更新
 function updateUIForLoggedOut() {
     const loginSection = document.getElementById('loginSection');
     const userInfo = document.getElementById('userInfo');
+    const shareSection = document.getElementById('shareSection');
     
     if (loginSection) loginSection.style.display = 'block';
     if (userInfo) userInfo.style.display = 'none';
+    if (shareSection) shareSection.style.display = 'none'; // 共有セクションを非表示
 }
 
 // Firestoreにデータを保存
@@ -104,13 +112,28 @@ async function saveDataToFirestore() {
     }
     
     try {
-        // ユーザー専用のドキュメントに保存
-        await db.collection('rankings').doc(currentUserId).set({
+        // 共有ランキングか自分のランキングか判定
+        const rankingId = currentRankingId || currentUserId;
+        
+        // ドキュメントを取得して既存データを確認
+        const docRef = db.collection('rankings').doc(rankingId);
+        const doc = await docRef.get();
+        
+        const dataToSave = {
             teams: teams,
             matches: matches,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            userEmail: currentUserEmail
-        });
+            lastUpdatedBy: currentUserEmail
+        };
+        
+        // 新規作成の場合のみownerとsharedWithを設定
+        if (!doc.exists) {
+            dataToSave.owner = currentUserId;
+            dataToSave.ownerEmail = currentUserEmail;
+            dataToSave.sharedWith = []; // 共有ユーザーリスト
+        }
+        
+        await docRef.set(dataToSave, { merge: true });
         console.log('Firestoreへの保存成功');
     } catch (error) {
         console.error('Firestore保存エラー:', error);
@@ -127,13 +150,17 @@ async function loadDataFromFirestore() {
     }
     
     try {
-        const doc = await db.collection('rankings').doc(currentUserId).get();
+        const rankingId = currentRankingId || currentUserId;
+        const doc = await db.collection('rankings').doc(rankingId).get();
         
         if (doc.exists) {
             const data = doc.data();
             teams = data.teams || [];
             matches = data.matches || [];
             console.log('Firestoreからデータを読み込みました');
+            
+            // 共有ユーザーリストを表示
+            displaySharedUsers(data);
         } else {
             // 初回ログイン時: ローカルストレージから移行
             loadData();
@@ -146,6 +173,7 @@ async function loadDataFromFirestore() {
         updateTeamSelects();
         displayRanking();
         displayMatchHistory();
+        enableRealtimeSync(); // リアルタイム同期を有効化
     } catch (error) {
         console.error('Firestore読み込みエラー:', error);
         // エラー時はローカルストレージから読み込み
@@ -153,11 +181,12 @@ async function loadDataFromFirestore() {
     }
 }
 
-// リアルタイム同期を有効化（オプション）
+// リアルタイム同期を有効化
 function enableRealtimeSync() {
     if (!currentUserId) return;
     
-    db.collection('rankings').doc(currentUserId).onSnapshot((doc) => {
+    const rankingId = currentRankingId || currentUserId;
+    db.collection('rankings').doc(rankingId).onSnapshot((doc) => {
         if (doc.exists) {
             const data = doc.data();
             teams = data.teams || [];
@@ -165,7 +194,105 @@ function enableRealtimeSync() {
             updateTeamSelects();
             displayRanking();
             displayMatchHistory();
+            displaySharedUsers(data);
             console.log('データが同期されました');
         }
     });
+}
+
+// URLから共有ランキングIDをチェック
+function checkForSharedRanking() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sharedId = urlParams.get('ranking');
+    
+    if (sharedId && sharedId !== currentUserId) {
+        currentRankingId = sharedId;
+        console.log('共有ランキングを読み込みます:', sharedId);
+        loadDataFromFirestore();
+        addUserToSharedList(sharedId);
+    }
+}
+
+// 共有リンクを生成
+async function generateShareLink() {
+    if (!currentUserId) {
+        alert('ログインが必要です');
+        return;
+    }
+    
+    const rankingId = currentRankingId || currentUserId;
+    const baseUrl = window.location.origin + window.location.pathname;
+    const shareUrl = `${baseUrl}?ranking=${rankingId}`;
+    
+    document.getElementById('shareLinkInput').value = shareUrl;
+    document.getElementById('shareLinkDisplay').style.display = 'block';
+}
+
+// 共有リンクをコピー
+function copyShareLink() {
+    const input = document.getElementById('shareLinkInput');
+    input.select();
+    document.execCommand('copy');
+    alert('共有リンクをコピーしました！\nこのリンクを友達に送ってください。');
+}
+
+// 共有ユーザーリストに追加
+async function addUserToSharedList(rankingId) {
+    if (!currentUserId || !currentUserEmail) return;
+    
+    try {
+        const docRef = db.collection('rankings').doc(rankingId);
+        const doc = await docRef.get();
+        
+        if (doc.exists) {
+            const data = doc.data();
+            const sharedWith = data.sharedWith || [];
+            
+            // 既に追加されているかチェック
+            const alreadyShared = sharedWith.some(u => u.userId === currentUserId);
+            
+            if (!alreadyShared && data.owner !== currentUserId) {
+                sharedWith.push({
+                    userId: currentUserId,
+                    email: currentUserEmail,
+                    addedAt: new Date().toISOString()
+                });
+                
+                await docRef.update({
+                    sharedWith: sharedWith
+                });
+                
+                console.log('共有ユーザーリストに追加されました');
+            }
+        }
+    } catch (error) {
+        console.error('共有リスト追加エラー:', error);
+    }
+}
+
+// 共有ユーザーを表示
+function displaySharedUsers(data) {
+    const sharedUsersList = document.getElementById('sharedUsersList');
+    const sharedUsersContent = document.getElementById('sharedUsersContent');
+    
+    if (!data || !data.sharedWith || data.sharedWith.length === 0) {
+        if (sharedUsersList) sharedUsersList.style.display = 'none';
+        return;
+    }
+    
+    if (sharedUsersList) sharedUsersList.style.display = 'block';
+    
+    let html = '<ul style="list-style: none; padding: 0;">';
+    html += `<li style="padding: 10px; background: #f0f0f0; border-radius: 5px; margin-bottom: 5px;">
+                👑 ${data.ownerEmail} (オーナー)
+             </li>`;
+    
+    data.sharedWith.forEach(user => {
+        html += `<li style="padding: 10px; background: #f9f9f9; border-radius: 5px; margin-bottom: 5px;">
+                    👤 ${user.email}
+                 </li>`;
+    });
+    html += '</ul>';
+    
+    if (sharedUsersContent) sharedUsersContent.innerHTML = html;
 }

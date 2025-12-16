@@ -42,6 +42,31 @@
                     <button onclick="logout()" class="btn btn-danger">ログアウト</button>
                 </div>
             </section>
+
+            <!-- 共有機能 -->
+            <section class="section" id="shareSection" style="display: none;">
+                <h2>🤝 共同編集</h2>
+                <p>他のGoogleアカウントとこのランキングを共有して、一緒に編集できます。</p>
+                
+                <div class="share-controls">
+                    <button onclick="generateShareLink()" class="btn btn-primary">共有リンクを生成</button>
+                    <div id="shareLinkDisplay" style="display: none; margin-top: 15px;">
+                        <label>共有リンク:</label>
+                        <div class="share-link-box">
+                            <input type="text" id="shareLinkInput" readonly>
+                            <button onclick="copyShareLink()" class="btn btn-secondary">コピー</button>
+                        </div>
+                        <p style="font-size: 0.9em; color: #666; margin-top: 5px;">
+                            このリンクを友達に送ると、Googleアカウントでログインして一緒に編集できます
+                        </p>
+                    </div>
+                </div>
+
+                <div id="sharedUsersList" style="display: none; margin-top: 20px;">
+                    <h3>共有中のユーザー</h3>
+                    <div id="sharedUsersContent"></div>
+                </div>
+            </section>
             <!-- チーム登録セクション -->
             <section class="section">
                 <h2>チーム登録</h2>
