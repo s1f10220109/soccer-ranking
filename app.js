@@ -324,10 +324,191 @@ function displayMatchHistory() {
         html += `<span>${match.homeTeam.name}: ${homeChange}pt</span>`;
         html += `<span>${match.awayTeam.name}: ${awayChange}pt</span>`;
         html += '</div>';
+        html += '<div class="match-actions">';
+        html += `<button onclick="editMatch(${match.id})" class="btn-icon btn-edit" title="編集">✏️</button>`;
+        html += `<button onclick="deleteMatch(${match.id})" class="btn-icon btn-delete" title="削除">🗑️</button>`;
+        html += '</div>';
         html += '</div>';
     });
     
     historyDiv.innerHTML = html;
+}
+
+// 試合を削除
+function deleteMatch(matchId) {
+    const match = matches.find(m => m.id === matchId);
+    if (!match) {
+        alert('試合が見つかりません');
+        return;
+    }
+    
+    if (!confirm(`${match.homeTeam.name} vs ${match.awayTeam.name} (${match.date}) の試合を削除しますか？\nポイントも元に戻ります。`)) {
+        return;
+    }
+    
+    // チームのポイントと統計を元に戻す
+    const homeTeam = teams.find(t => t.id === match.homeTeam.id);
+    const awayTeam = teams.find(t => t.id === match.awayTeam.id);
+    
+    if (homeTeam) {
+        homeTeam.points -= match.homePointsChange;
+        homeTeam.matches--;
+        homeTeam.goalsFor -= match.homeScore;
+        homeTeam.goalsAgainst -= match.awayScore;
+        
+        // 勝敗数を戻す
+        if (match.homeScore > match.awayScore) homeTeam.wins--;
+        else if (match.homeScore === match.awayScore) homeTeam.draws--;
+        else homeTeam.losses--;
+    }
+    
+    if (awayTeam) {
+        awayTeam.points -= match.awayPointsChange;
+        awayTeam.matches--;
+        awayTeam.goalsFor -= match.awayScore;
+        awayTeam.goalsAgainst -= match.homeScore;
+        
+        // 勝敗数を戻す
+        if (match.awayScore > match.homeScore) awayTeam.wins--;
+        else if (match.homeScore === match.awayScore) awayTeam.draws--;
+        else awayTeam.losses--;
+    }
+    
+    // 試合を削除
+    matches = matches.filter(m => m.id !== matchId);
+    
+    saveData();
+    displayRanking();
+    displayMatchHistory();
+    
+    alert('試合を削除しました');
+}
+
+// 試合を編集
+function editMatch(matchId) {
+    const match = matches.find(m => m.id === matchId);
+    if (!match) {
+        alert('試合が見つかりません');
+        return;
+    }
+    
+    // モーダルに現在の値を設定
+    document.getElementById('editMatchId').value = match.id;
+    document.getElementById('editHomeTeam').textContent = match.homeTeam.name;
+    document.getElementById('editAwayTeam').textContent = match.awayTeam.name;
+    document.getElementById('editHomeScore').value = match.homeScore;
+    document.getElementById('editAwayScore').value = match.awayScore;
+    document.getElementById('editMatchType').value = match.matchType;
+    document.getElementById('editMatchDate').value = match.date;
+    
+    // モーダルを表示
+    document.getElementById('editMatchModal').style.display = 'flex';
+}
+
+// モーダルを閉じる
+function closeEditModal() {
+    document.getElementById('editMatchModal').style.display = 'none';
+}
+
+// 試合の編集を保存
+function saveMatchEdit() {
+    const matchId = parseInt(document.getElementById('editMatchId').value);
+    const newHomeScore = parseInt(document.getElementById('editHomeScore').value);
+    const newAwayScore = parseInt(document.getElementById('editAwayScore').value);
+    const newMatchType = document.getElementById('editMatchType').value;
+    const newMatchDate = document.getElementById('editMatchDate').value;
+    
+    // バリデーション
+    if (isNaN(newHomeScore) || isNaN(newAwayScore) || newHomeScore < 0 || newAwayScore < 0) {
+        alert('有効なスコアを入力してください');
+        return;
+    }
+    
+    if (!newMatchDate) {
+        alert('試合日を選択してください');
+        return;
+    }
+    
+    const match = matches.find(m => m.id === matchId);
+    if (!match) {
+        alert('試合が見つかりません');
+        return;
+    }
+    
+    // まず古いデータを元に戻す
+    const homeTeam = teams.find(t => t.id === match.homeTeam.id);
+    const awayTeam = teams.find(t => t.id === match.awayTeam.id);
+    
+    if (homeTeam) {
+        homeTeam.points -= match.homePointsChange;
+        homeTeam.matches--;
+        homeTeam.goalsFor -= match.homeScore;
+        homeTeam.goalsAgainst -= match.awayScore;
+        
+        if (match.homeScore > match.awayScore) homeTeam.wins--;
+        else if (match.homeScore === match.awayScore) homeTeam.draws--;
+        else homeTeam.losses--;
+    }
+    
+    if (awayTeam) {
+        awayTeam.points -= match.awayPointsChange;
+        awayTeam.matches--;
+        awayTeam.goalsFor -= match.awayScore;
+        awayTeam.goalsAgainst -= match.homeScore;
+        
+        if (match.awayScore > match.homeScore) awayTeam.wins--;
+        else if (match.homeScore === match.awayScore) awayTeam.draws--;
+        else awayTeam.losses--;
+    }
+    
+    // 新しい試合結果を判定
+    let homeResult, awayResult;
+    if (newHomeScore > newAwayScore) {
+        homeResult = 'win';
+        awayResult = 'loss';
+    } else if (newHomeScore < newAwayScore) {
+        homeResult = 'loss';
+        awayResult = 'win';
+    } else {
+        homeResult = 'draw';
+        awayResult = 'draw';
+    }
+    
+    // 新しいポイント計算
+    const homePointsChange = calculatePoints(homeTeam.points, awayTeam.points, homeResult, newMatchType);
+    const awayPointsChange = calculatePoints(awayTeam.points, homeTeam.points, awayResult, newMatchType);
+    
+    // チーム情報を更新
+    homeTeam.points += homePointsChange;
+    homeTeam.matches++;
+    homeTeam.goalsFor += newHomeScore;
+    homeTeam.goalsAgainst += newAwayScore;
+    if (homeResult === 'win') homeTeam.wins++;
+    else if (homeResult === 'draw') homeTeam.draws++;
+    else homeTeam.losses++;
+    
+    awayTeam.points += awayPointsChange;
+    awayTeam.matches++;
+    awayTeam.goalsFor += newAwayScore;
+    awayTeam.goalsAgainst += newHomeScore;
+    if (awayResult === 'win') awayTeam.wins++;
+    else if (awayResult === 'draw') awayTeam.draws++;
+    else awayTeam.losses++;
+    
+    // 試合データを更新
+    match.homeScore = newHomeScore;
+    match.awayScore = newAwayScore;
+    match.matchType = newMatchType;
+    match.date = newMatchDate;
+    match.homePointsChange = homePointsChange;
+    match.awayPointsChange = awayPointsChange;
+    
+    saveData();
+    displayRanking();
+    displayMatchHistory();
+    closeEditModal();
+    
+    alert('試合を更新しました！');
 }
 
 // データをエクスポート

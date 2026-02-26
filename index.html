@@ -139,6 +139,57 @@
         </div>
     </div>
 
+    <!-- 試合編集モーダル -->
+    <div id="editMatchModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>試合を編集</h2>
+                <button onclick="closeEditModal()" class="modal-close">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editMatchId">
+                
+                <div class="form-group">
+                    <label>ホームチーム</label>
+                    <div class="team-display" id="editHomeTeam"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label>スコア</label>
+                    <div class="score-inputs">
+                        <input type="number" id="editHomeScore" min="0">
+                        <span>-</span>
+                        <input type="number" id="editAwayScore" min="0">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>アウェイチーム</label>
+                    <div class="team-display" id="editAwayTeam"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label>試合タイプ</label>
+                    <select id="editMatchType">
+                        <option value="friendly">親善試合 (x1.0)</option>
+                        <option value="qualifier">予選 (x2.5)</option>
+                        <option value="continental">大陸選手権 (x3.0)</option>
+                        <option value="worldcup">ワールドカップ (x4.0)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>試合日</label>
+                    <input type="date" id="editMatchDate">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeEditModal()" class="btn btn-secondary">キャンセル</button>
+                <button onclick="saveMatchEdit()" class="btn btn-success">保存</button>
+            </div>
+        </div>
+    </div>
+
     <script src="firebase-config.js"></script>
     <script src="app.js"></script>
 </body>
